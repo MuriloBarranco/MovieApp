@@ -9,9 +9,9 @@ import {
   ContentArea,
   Rate,
   ListGenres,
-  Description
+  Description,
 } from "./styles";
-import { ScrollView, Modal} from 'react-native';
+import { ScrollView, Modal } from "react-native";
 
 import Feather from "react-native-vector-icons/Feather";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -19,7 +19,9 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import api, { key } from "../../services/api";
 import Stars from "react-native-stars";
 import Genres from "../../components/Genres";
-import ModalLink from '../../components/ModalLink'
+import ModalLink from "../../components/ModalLink";
+
+import { saveMovie, hasMovie, deleteMovie } from "../../utils/storage";
 
 function Detail() {
   const navigation = useNavigation();
@@ -29,6 +31,7 @@ function Detail() {
 
   const [openLink, setOpenLink] = useState(false);
 
+  const [favoritedMovie, setFavoritedMovie] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -46,7 +49,9 @@ function Detail() {
 
       if (isActive) {
         setMovie(response.data);
-        // console.log(response.data);
+
+        const isFavorite = await hasMovie(response.data);
+        setFavoritedMovie(isFavorite);
       }
     }
 
@@ -59,6 +64,23 @@ function Detail() {
     };
   }, []);
 
+  async function handleFavoriteMovie(movie) {
+
+    if (favoritedMovie) {
+      await deleteMovie(movie.id);
+      // Se ele for removido entao ele nao esta mais na lista
+      setFavoritedMovie(false);
+      alert("Filme removido da sua lista");
+    } else {
+      await saveMovie('@primereact', movie);
+      // Voce salvou esse filme na sua lista
+      setFavoritedMovie(true);
+
+      alert("Filme salvo na sua lista");
+    }
+  
+  }
+
   return (
     <Container>
       <Header>
@@ -66,8 +88,12 @@ function Detail() {
           <Feather name="arrow-left" size={28} color="#fff" />
         </HeaderButton>
 
-        <HeaderButton>
-          <Ionicons name="bookmark" size={28} color="#fff" />
+        <HeaderButton onPress={() => handleFavoriteMovie(movie)}>
+          {favoritedMovie ? (
+            <Ionicons name="bookmark" size={28} color="#fff" />
+          ) : (
+            <Ionicons name="bookmark-outline" size={28} color="#fff" />
+          )}
         </HeaderButton>
       </Header>
 
@@ -78,7 +104,7 @@ function Detail() {
         }}
       />
 
-      <ButtonLink onPress={ () => setOpenLink(true) }>
+      <ButtonLink onPress={() => setOpenLink(true)}>
         <Feather name="link" size={28} color="#fff" />
       </ButtonLink>
 
@@ -91,34 +117,35 @@ function Detail() {
           half={true}
           starSize={20}
           fullStar={<Ionicons name="md-star" size={24} color="#E7A74e" />}
-          emptyStar={<Ionicons name="md-star-outline" size={24} color="#E7A74e" />}
+          emptyStar={
+            <Ionicons name="md-star-outline" size={24} color="#E7A74e" />
+          }
           halfStar={<Ionicons name="md-star-half" size={24} color="#E7A74e" />}
           disable={true}
         />
         <Rate>{movie.vote_average}/10</Rate>
       </ContentArea>
 
-      <ListGenres 
+      <ListGenres
         data={movie?.genres}
         horizontal={true}
         showsHorizontalScrollIndicator={false}
-        keyExtractor={ (item) => String(item.id) }
-        renderItem={ ({ item }) => <Genres data={item} /> }
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => <Genres data={item} />}
       />
 
-        <ScrollView showsVerticalScrollIndicator={false} >
-          <Title>Descricao</Title>
-          <Description>{movie.overview}</Description>
-        </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Title>Descricao</Title>
+        <Description>{movie.overview}</Description>
+      </ScrollView>
 
-        <Modal animationType="slide" transparent={true} visible={openLink}>
-          <ModalLink 
+      <Modal animationType="slide" transparent={true} visible={openLink}>
+        <ModalLink
           link={movie?.homepage}
           title={movie?.title}
-          closeModal={ () => setOpenLink(false) }
-          /> 
-        </Modal>
-
+          closeModal={() => setOpenLink(false)}
+        />
+      </Modal>
     </Container>
   );
 }
